@@ -1,0 +1,542 @@
+{
+  "profile": {
+    "businessName": "Mehta Traders",
+    "gstin": "24ABCDE1234F1Z5",
+    "email": "rohan@mehtatraders.in",
+    "phoneNumber": "+91 98250 12345",
+    "address": "Shop 12, CG Road, Navrangpura",
+    "city": "Ahmedabad",
+    "state": "Gujarat",
+    "pincode": "380009",
+    "upiId": "mehtatraders@upi",
+    "isRegisteredGST": true
+  },
+  "products": [
+    {
+      "id": "prod-1",
+      "name": "Electric Kettle",
+      "sku": "KIT-001",
+      "price": 1800,
+      "category": "Kitchen",
+      "brand": "Havells",
+      "unit": "Pcs",
+      "quantity": 20,
+      "unlimitedStock": true,
+      "active": true,
+      "gstRate": 18,
+      "hsn": "85167920",
+      "description": "1.5 L stainless steel electric kettle with auto shut-off and a 360° swivel base.",
+      "imageUrl": "/figma/932c92fb-aea3-4c52-9303-75213da82af0.png",
+      "detailImageUrl": "/figma/96687706-663e-4254-91db-4e6524397a0c.png",
+      "pickerImageUrl": "/figma/8e6662d8-ad89-41ad-ac07-9a0a3818cde8.png"
+    },
+    {
+      "id": "prod-2",
+      "name": "Steel Flask",
+      "sku": "KIT-002",
+      "price": 800,
+      "category": "Drinkware",
+      "brand": "Milton",
+      "unit": "Pcs",
+      "quantity": 30,
+      "unlimitedStock": true,
+      "active": true,
+      "gstRate": 18,
+      "hsn": "96170012",
+      "description": "Double-wall stainless steel flask. Keeps your drinks hot or cold on the go.",
+      "imageUrl": "/figma/f8583045-6a73-4795-a80a-e4df44188be8.png",
+      "pickerImageUrl": "/figma/c4eb9824-9caf-4c3f-9fef-d632128c2ba0.png"
+    },
+    {
+      "id": "prod-3",
+      "name": "Pop-up Toaster",
+      "sku": "KIT-003",
+      "price": 2200,
+      "category": "Kitchen",
+      "brand": "Bajaj",
+      "unit": "Pcs",
+      "quantity": 12,
+      "unlimitedStock": true,
+      "active": true,
+      "gstRate": 18,
+      "hsn": "85167200",
+      "description": "Two-slice toaster with variable browning control and a removable crumb tray.",
+      "imageUrl": "/figma/c425f6a1-b523-468b-b23c-d34e2976771c.png",
+      "pickerImageUrl": "/figma/b8886162-bf7c-45c3-bb58-7b0e12615dfa.png"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-1",
+      "name": "Aarav Mehta",
+      "email": "aarav.mehta@gmail.com",
+      "phone": "+91 98765 43210",
+      "address": "24, Park View Society, Navrangpura",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380009"
+    },
+    {
+      "id": "cust-2",
+      "name": "Diya Patel",
+      "email": "diya.patel@gmail.com",
+      "phone": "+91 98250 12341",
+      "address": "24, Park View Society, Navrangpura",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380009"
+    },
+    {
+      "id": "cust-3",
+      "name": "Rohan Shah",
+      "email": "rohan.shah@gmail.com",
+      "phone": "+91 98250 12342",
+      "address": "24, Park View Society, Navrangpura",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380009"
+    },
+    {
+      "id": "cust-4",
+      "name": "Neha Joshi",
+      "email": "neha.joshi@gmail.com",
+      "phone": "+91 98250 12343",
+      "address": "24, Park View Society, Navrangpura",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380009"
+    },
+    {
+      "id": "cust-5",
+      "name": "Kabir Rao",
+      "email": "kabir.rao@gmail.com",
+      "phone": "+91 98250 12344",
+      "address": "24, Park View Society, Navrangpura",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380009"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv-1",
+      "invoiceNumber": "BZ-2026-0421",
+      "vendorId": "vendor-1",
+      "vendorName": "Mehta Traders",
+      "vendorEmail": "rohan@mehtatraders.in",
+      "vendorGstin": "24ABCDE1234F1Z5",
+      "vendorState": "Gujarat",
+      "customer": {
+        "id": "cust-1",
+        "name": "Aarav Mehta",
+        "email": "aarav.mehta@gmail.com",
+        "phone": "+91 98765 43210",
+        "address": "24, Park View Society, Navrangpura",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "380009"
+      },
+      "items": [
+        {
+          "id": "item-1",
+          "productId": "prod-1",
+          "name": "Electric Kettle",
+          "sku": "KIT-001",
+          "quantity": 2,
+          "unitPrice": 1800,
+          "gstRate": 18,
+          "lineTotal": 3600
+        },
+        {
+          "id": "item-2",
+          "productId": "prod-2",
+          "name": "Steel Flask",
+          "sku": "KIT-002",
+          "quantity": 3,
+          "unitPrice": 800,
+          "gstRate": 18,
+          "lineTotal": 2400
+        }
+      ],
+      "invoiceDate": "2026-10-16",
+      "dueDate": "2026-10-23",
+      "subtotal": 6000,
+      "cgst": 540,
+      "sgst": 540,
+      "igst": 0,
+      "totalTax": 1080,
+      "discount": 0,
+      "totalAmount": 7080,
+      "status": "PENDING",
+      "notes": "Thank you for shopping with Mehta Traders.",
+      "timeline": [
+        {
+          "step": 1,
+          "title": "Invoice created",
+          "description": "Invoice 421 generated",
+          "date": "16 Oct 2026",
+          "completed": true,
+          "iconType": "sent"
+        },
+        {
+          "step": 2,
+          "title": "Viewed by customer",
+          "description": "Invoice viewed in Bill-Z",
+          "completed": true,
+          "iconType": "viewed"
+        },
+        {
+          "step": 3,
+          "title": "Payment pending",
+          "description": "Due in 7 days",
+          "completed": false,
+          "current": true,
+          "iconType": "pending"
+        },
+        {
+          "step": 4,
+          "title": "Payment received",
+          "description": "Payment recorded by vendor",
+          "completed": false,
+          "iconType": "received"
+        }
+      ]
+    },
+    {
+      "id": "inv-2",
+      "invoiceNumber": "BZ-2026-0420",
+      "vendorId": "vendor-1",
+      "vendorName": "Mehta Traders",
+      "vendorEmail": "rohan@mehtatraders.in",
+      "vendorGstin": "24ABCDE1234F1Z5",
+      "vendorState": "Gujarat",
+      "customer": {
+        "id": "cust-2",
+        "name": "Diya Patel",
+        "email": "diya.patel@gmail.com",
+        "phone": "+91 98250 12341",
+        "address": "24, Park View Society, Navrangpura",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "380009"
+      },
+      "items": [
+        {
+          "productId": "prod-3",
+          "id": "item-3",
+          "sku": "KIT-003",
+          "quantity": 2,
+          "unitPrice": 2200,
+          "name": "Pop-up Toaster",
+          "lineTotal": 4400,
+          "gstRate": 18
+        },
+        {
+          "productId": "prod-2",
+          "id": "item-4",
+          "sku": "KIT-002",
+          "quantity": 7,
+          "unitPrice": 800,
+          "name": "Steel Flask",
+          "lineTotal": 5600,
+          "gstRate": 18
+        }
+      ],
+      "invoiceDate": "2026-10-15",
+      "dueDate": "2026-10-22",
+      "subtotal": 10000,
+      "cgst": 900,
+      "sgst": 900,
+      "igst": 0,
+      "totalTax": 1800,
+      "discount": 0,
+      "totalAmount": 11800,
+      "status": "PAID",
+      "notes": "Thank you for shopping with Mehta Traders.",
+      "timeline": [
+        {
+          "step": 1,
+          "title": "Invoice created",
+          "description": "Invoice 420 generated",
+          "date": "15 Oct 2026",
+          "completed": true,
+          "iconType": "sent"
+        },
+        {
+          "step": 2,
+          "title": "Viewed by customer",
+          "description": "Invoice viewed in Bill-Z",
+          "completed": true,
+          "iconType": "viewed"
+        },
+        {
+          "step": 3,
+          "title": "Payment pending",
+          "description": "Due in 7 days",
+          "completed": true,
+          "current": false,
+          "iconType": "pending"
+        },
+        {
+          "step": 4,
+          "title": "Payment received",
+          "description": "Payment recorded by vendor",
+          "completed": true,
+          "iconType": "received"
+        }
+      ]
+    },
+    {
+      "id": "inv-3",
+      "invoiceNumber": "BZ-2026-0419",
+      "vendorId": "vendor-1",
+      "vendorName": "Mehta Traders",
+      "vendorEmail": "rohan@mehtatraders.in",
+      "vendorGstin": "24ABCDE1234F1Z5",
+      "vendorState": "Gujarat",
+      "customer": {
+        "id": "cust-3",
+        "name": "Rohan Shah",
+        "email": "rohan.shah@gmail.com",
+        "phone": "+91 98250 12342",
+        "address": "24, Park View Society, Navrangpura",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "380009"
+      },
+      "items": [
+        {
+          "productId": "prod-2",
+          "id": "item-5",
+          "sku": "KIT-002",
+          "quantity": 5,
+          "unitPrice": 800,
+          "name": "Steel Flask",
+          "lineTotal": 4000,
+          "gstRate": 18
+        }
+      ],
+      "invoiceDate": "2026-10-14",
+      "dueDate": "2026-10-21",
+      "subtotal": 4000,
+      "cgst": 360,
+      "sgst": 360,
+      "igst": 0,
+      "totalTax": 720,
+      "discount": 0,
+      "totalAmount": 4720,
+      "status": "PENDING",
+      "notes": "Thank you for shopping with Mehta Traders.",
+      "timeline": [
+        {
+          "step": 1,
+          "title": "Invoice created",
+          "description": "Invoice 419 generated",
+          "date": "14 Oct 2026",
+          "completed": true,
+          "iconType": "sent"
+        },
+        {
+          "step": 2,
+          "title": "Viewed by customer",
+          "description": "Invoice viewed in Bill-Z",
+          "completed": true,
+          "iconType": "viewed"
+        },
+        {
+          "step": 3,
+          "title": "Payment pending",
+          "description": "Due in 7 days",
+          "completed": false,
+          "current": true,
+          "iconType": "pending"
+        },
+        {
+          "step": 4,
+          "title": "Payment received",
+          "description": "Payment recorded by vendor",
+          "completed": false,
+          "iconType": "received"
+        }
+      ]
+    },
+    {
+      "id": "inv-4",
+      "invoiceNumber": "BZ-2026-0418",
+      "vendorId": "vendor-1",
+      "vendorName": "Mehta Traders",
+      "vendorEmail": "rohan@mehtatraders.in",
+      "vendorGstin": "24ABCDE1234F1Z5",
+      "vendorState": "Gujarat",
+      "customer": {
+        "id": "cust-4",
+        "name": "Neha Joshi",
+        "email": "neha.joshi@gmail.com",
+        "phone": "+91 98250 12343",
+        "address": "24, Park View Society, Navrangpura",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "380009"
+      },
+      "items": [
+        {
+          "productId": "prod-2",
+          "id": "item-6",
+          "sku": "KIT-002",
+          "quantity": 10,
+          "unitPrice": 800,
+          "name": "Steel Flask",
+          "lineTotal": 8000,
+          "gstRate": 18
+        }
+      ],
+      "invoiceDate": "2026-10-13",
+      "dueDate": "2026-10-20",
+      "subtotal": 8000,
+      "cgst": 720,
+      "sgst": 720,
+      "igst": 0,
+      "totalTax": 1440,
+      "discount": 0,
+      "totalAmount": 9440,
+      "status": "PAID",
+      "notes": "Thank you for shopping with Mehta Traders.",
+      "timeline": [
+        {
+          "step": 1,
+          "title": "Invoice created",
+          "description": "Invoice 418 generated",
+          "date": "13 Oct 2026",
+          "completed": true,
+          "iconType": "sent"
+        },
+        {
+          "step": 2,
+          "title": "Viewed by customer",
+          "description": "Invoice viewed in Bill-Z",
+          "completed": true,
+          "iconType": "viewed"
+        },
+        {
+          "step": 3,
+          "title": "Payment pending",
+          "description": "Due in 7 days",
+          "completed": true,
+          "current": false,
+          "iconType": "pending"
+        },
+        {
+          "step": 4,
+          "title": "Payment received",
+          "description": "Payment recorded by vendor",
+          "completed": true,
+          "iconType": "received"
+        }
+      ]
+    },
+    {
+      "id": "inv-5",
+      "invoiceNumber": "BZ-2026-0417",
+      "vendorId": "vendor-1",
+      "vendorName": "Mehta Traders",
+      "vendorEmail": "rohan@mehtatraders.in",
+      "vendorGstin": "24ABCDE1234F1Z5",
+      "vendorState": "Gujarat",
+      "customer": {
+        "id": "cust-5",
+        "name": "Kabir Rao",
+        "email": "kabir.rao@gmail.com",
+        "phone": "+91 98250 12344",
+        "address": "24, Park View Society, Navrangpura",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "380009"
+      },
+      "items": [
+        {
+          "productId": "prod-1",
+          "id": "item-7",
+          "sku": "KIT-001",
+          "quantity": 1,
+          "unitPrice": 1800,
+          "name": "Electric Kettle",
+          "lineTotal": 1800,
+          "gstRate": 18
+        },
+        {
+          "productId": "prod-2",
+          "id": "item-8",
+          "sku": "KIT-002",
+          "quantity": 4,
+          "unitPrice": 800,
+          "name": "Steel Flask",
+          "lineTotal": 3200,
+          "gstRate": 18
+        }
+      ],
+      "invoiceDate": "2026-10-12",
+      "dueDate": "2026-10-19",
+      "subtotal": 5000,
+      "cgst": 450,
+      "sgst": 450,
+      "igst": 0,
+      "totalTax": 900,
+      "discount": 0,
+      "totalAmount": 5900,
+      "status": "PAID",
+      "notes": "Thank you for shopping with Mehta Traders.",
+      "timeline": [
+        {
+          "step": 1,
+          "title": "Invoice created",
+          "description": "Invoice 417 generated",
+          "date": "12 Oct 2026",
+          "completed": true,
+          "iconType": "sent"
+        },
+        {
+          "step": 2,
+          "title": "Viewed by customer",
+          "description": "Invoice viewed in Bill-Z",
+          "completed": true,
+          "iconType": "viewed"
+        },
+        {
+          "step": 3,
+          "title": "Payment pending",
+          "description": "Due in 7 days",
+          "completed": true,
+          "current": false,
+          "iconType": "pending"
+        },
+        {
+          "step": 4,
+          "title": "Payment received",
+          "description": "Payment recorded by vendor",
+          "completed": true,
+          "iconType": "received"
+        }
+      ]
+    }
+  ],
+  "preferences": {
+    "prefix": "BZ-2026-",
+    "nextNumber": 422,
+    "gstRate": 18,
+    "paymentTerms": 7,
+    "priceEntry": "Exclusive of tax",
+    "note": "Thank you for shopping with Mehta Traders.",
+    "showGst": true,
+    "emailInvoices": true,
+    "paymentUpdates": true,
+    "weeklySummary": false
+  },
+  "demoAuth": {
+    "code": "482916",
+    "expiresInSeconds": 600,
+    "cooldownSeconds": 30,
+    "maxAttempts": 5
+  },
+  "weeklySales": [5900, 9440, 4720, 11800, 7080, 0, 0],
+  "referenceDate": "2026-10-16"
+}

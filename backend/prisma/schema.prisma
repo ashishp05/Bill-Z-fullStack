@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  image     String?
+  roleId    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String?
+  lastName  String?
+  email     String   @unique
+  password  String?
+  image     String?
+  roleId    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Relationships
+  role      Roles?   @relation(fields: [roleId], references: [id])
+
+  @@index([roleId])
+}
+
+model Roles {
+  id     String  @id @default(uuid())
+  name   String
+  active Boolean @default(true)
+  user   User[]
+}
+
+model Vendor {
+  id             String   @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String   @unique
+  password       String
+  businessName   String?
+  phoneCountry   String?
+  phoneNumber    String?
+  profilePicture String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  products Product[]
+
+  @@index([email])
+  @@map("vendors")
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  price          Int
+  quantity       Int      @default(0)
+  unlimitedStock Boolean  @default(false)
+  vendorId       String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  vendor Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  images String[] @default([])
+
+  @@index([vendorId])
+  @@map("products")
+}
