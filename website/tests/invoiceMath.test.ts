@@ -31,24 +31,33 @@ test("mixed GST rates are calculated per line and interstate tax uses IGST", () 
   assert.equal(totals.sgst, 0);
   assert.equal(totals.totalAmount, 223);
 });
-test("discount is allocated before calculating GST", () => {
+test("discount is allocated before calculating GST, rounded to whole rupees", () => {
   const totals = invoiceTotals([item(100, 1, 5), item(100, 1, 18)], 100);
   assert.equal(totals.discount, 100);
-  assert.equal(totals.totalTax, 11.5);
-  assert.equal(totals.totalAmount, 111.5);
+  // 50 x 5% = 2.5 -> 3, 50 x 18% = 9
+  assert.equal(totals.totalTax, 12);
+  assert.equal(totals.totalAmount, 112);
 });
-test("paise rounding preserves split tax and total", () => {
-  const totals = invoiceTotals([item(99.99, 3, 18), item(5.25, 2, 5)], 7.31);
+test("B2B demo invoice: discount spread by line value matches the server", () => {
+  const totals = invoiceTotals([item(1800, 5, 18), item(899, 4, 18)], 500);
+  assert.deepEqual(totals, {
+    subtotal: 12596,
+    discount: 500,
+    totalTax: 2178,
+    cgst: 1089,
+    sgst: 1089,
+    igst: 0,
+    totalAmount: 14274,
+  });
+});
+test("whole-rupee totals stay consistent and CGST + SGST equals total tax", () => {
+  const totals = invoiceTotals([item(899, 1, 18), item(360, 3, 12)], 7);
+  assert.equal(totals.cgst + totals.sgst, totals.totalTax);
   assert.equal(
-    Math.round((totals.cgst + totals.sgst) * 100),
-    Math.round(totals.totalTax * 100),
+    totals.totalAmount,
+    totals.subtotal - totals.discount + totals.totalTax,
   );
-  assert.equal(
-    Math.round(totals.totalAmount * 100),
-    Math.round(totals.subtotal * 100) -
-      Math.round(totals.discount * 100) +
-      Math.round(totals.totalTax * 100),
-  );
+  for (const value of Object.values(totals)) assert.ok(Number.isInteger(value));
 });
 test("discounts are capped and an empty bill has zero totals", () => {
   assert.equal(invoiceTotals([item(10, 1, 18)], 999).totalAmount, 0);

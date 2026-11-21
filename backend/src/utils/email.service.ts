@@ -70,3 +70,31 @@ export const sendNewUserInvitationEmail = async (options: NewUserInvitationEmail
     html,
   });
 };
+
+export interface OtpEmailOptions {
+  email: string;
+  name?: string;
+  code: string;
+  expiresInMinutes: number;
+}
+
+/**
+ * Send a one-time sign-in code for vendor or customer login
+ */
+export const sendOtpEmail = async (options: OtpEmailOptions) => {
+  const { email, name = 'there', code, expiresInMinutes } = options;
+
+  const templatePath = path.join(templatesDirPath, 'auth', 'otp_code.hbs');
+
+  const html = renderEmailTemplate({
+    templatePath,
+    data: { name, code, expiresInMinutes, appName: 'Bill-Z' },
+  });
+
+  return sendEmail({
+    to: email,
+    subject: `${code} is your Bill-Z verification code`,
+    html,
+    text: `Your Bill-Z verification code is ${code}. It is valid for ${expiresInMinutes} minutes.`,
+  });
+};

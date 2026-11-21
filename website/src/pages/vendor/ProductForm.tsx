@@ -18,14 +18,15 @@ import { formatINR } from "../../utils/indianFormat";
 
 export function ProductForm() {
   const { id } = useParams();
-  const { products, preferences, addProduct, updateProduct } = useBilling();
+  const { products, preferences, categories, brands, addProduct, updateProduct } =
+    useBilling();
   const navigate = useNavigate();
   const existing = products.find((p) => p.id === id);
   const [form, setForm] = useState(() => ({
     name: existing?.name || "Electric Kettle",
     sku: existing?.sku || "KIT-001",
-    category: existing?.category || "Kitchen",
-    brand: existing?.brand || "Havells",
+    category: existing?.category || categories[0] || "",
+    brand: existing?.brand || brands[0] || "",
     price: existing?.price ?? 1800,
     gstRate: existing?.gstRate ?? preferences.gstRate,
     description:
@@ -131,23 +132,29 @@ export function ProductForm() {
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
           >
-            {["Kitchen", "Drinkware", "Other"].map((s) => (
+            <option value="">No category</option>
+            {categories.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </Select>
         </div>
-        <Input
+        <Select
           label="Brand"
           value={form.brand}
           onChange={(e) => setForm({ ...form, brand: e.target.value })}
-        />
+        >
+          <option value="">No brand</option>
+          {brands.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </Select>
         <div className="field-row">
           <Input
             label="Selling price (₹) *"
             type="number"
             required
             min="0"
-            step=".01"
+            step="1"
             value={form.price}
             onChange={(e) =>
               setForm({ ...form, price: Number(e.target.value) })

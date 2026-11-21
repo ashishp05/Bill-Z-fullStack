@@ -1,4 +1,6 @@
 import seed from "../data/demo.json";
+import { USE_API } from "../config/dataSource";
+import { apiAuthService } from "../api/auth.adapter";
 import type { AuthUser, UserRole } from "../types/auth.types";
 export interface DemoSession {
   user: AuthUser;
@@ -12,13 +14,25 @@ export interface AccountLookup {
   /** Where the code is sent, shown on the OTP screen. */
   destination: string;
 }
+/** "register" creates a new business account after the email is verified. */
+export type OtpPurpose = "login" | "register";
 export interface AuthService {
   findAccount(identifier: string): Promise<AccountLookup>;
   requestOtp(
     email: string,
     role: UserRole,
-  ): Promise<{ expiresAt: number; resendAt: number }>;
-  verifyOtp(email: string, code: string, role: UserRole): Promise<DemoSession>;
+    purpose?: OtpPurpose,
+  ): Promise<{ expiresAt: number; resendAt: number; destination?: string }>;
+  verifyOtp(
+    email: string,
+    code: string,
+    role: UserRole,
+    purpose?: OtpPurpose,
+  ): Promise<DemoSession>;
+  updateCustomerProfile(patch: {
+    name?: string;
+    phone?: string;
+  }): Promise<{ name: string; phone: string }>;
 }
 interface Challenge {
   email: string;
@@ -33,7 +47,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Last 10 digits of an Indian mobile number, ignoring +91, spaces and dashes. */
 const mobileKey = (value: string) => value.replace(/\D/g, "").slice(-10);
 /** UI simulation only. Production code generation, email delivery and verification belong on the server. */
-export const authService: AuthService = {
+export const mockAuthService: AuthService = {
   async findAccount(identifier) {
     const value = identifier.trim();
     const isEmail = value.includes("@");
@@ -123,4 +137,9 @@ export const authService: AuthService = {
           };
     return { user, token: `demo-${role}-session` };
   },
+  async updateCustomerProfile(patch) {
+    return { name: patch.name ?? "", phone: patch.phone ?? "" };
+  },
 };
+
+export const authService: AuthService = USE_API ? apiAuthService : mockAuthService;

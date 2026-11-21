@@ -12,15 +12,27 @@ import {
 } from "../../components/common/Design";
 import { InvoiceCard, InvoiceTable } from "../../components/common/InvoiceCard";
 import { InstallPrompt } from "../../components/pwa/InstallPrompt";
-import { formatINR } from "../../utils/indianFormat";
+import { formatINR, todayISODate } from "../../utils/indianFormat";
 import seed from "../../data/demo.json";
+import { USE_API } from "../../config/dataSource";
 import type { CSSProperties } from "react";
+
+/** "Today" is the design's reference date in mock mode and the real date with the API. */
+const today = () =>
+  USE_API ? todayISODate() : seed.referenceDate;
+/** Monday of the week containing `date` (YYYY-MM-DD). */
+const mondayOf = (date: string) => {
+  const d = new Date(date + "T12:00:00Z");
+  return new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86400000)
+    .toISOString()
+    .slice(0, 10);
+};
 
 export function VendorDashboard() {
   const { profile, invoices } = useBilling();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [weekStart, setWeekStart] = useState("2026-10-12");
+  const [weekStart, setWeekStart] = useState(() => mondayOf(today()));
   const [chooseWeek, setChooseWeek] = useState(false);
   const weekEnd = new Date(
     new Date(weekStart + "T12:00:00Z").getTime() + 6 * 86400000,
@@ -97,7 +109,7 @@ export function VendorDashboard() {
       <div className="dashboard-introduction">
         <div className="greeting">
           <p className="date-label">
-            {new Date(seed.referenceDate + "T12:00:00")
+            {new Date(today() + "T12:00:00")
               .toLocaleDateString("en-GB", {
                 weekday: "long",
                 day: "numeric",

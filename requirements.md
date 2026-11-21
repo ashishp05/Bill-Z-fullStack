@@ -15,7 +15,7 @@ Status Legend:
 - [x] Admin Vite + React 18 + Tailwind CSS + Redux Toolkit boilerplate setup
 - [x] Dual Storage Engine (Local `/uploads/` and AWS S3) via Storage Facade
 - [x] Email dispatch service with Nodemailer & Handlebars templates
-- [ ] Align database schema with complete Bill-Z domain (Vendor, Customer, Product, Invoice, InvoiceItem, OTP)
+- [x] Align database schema with complete Bill-Z domain (Vendor, VendorSettings, Customer, VendorCustomer, Category, Brand, Product, Invoice, InvoiceItem, OtpVerification). Migration `20261121090000_billing_domain`, additive only.
 - [ ] Initialize Vendor & Customer PWA workspace (React + Tailwind CSS)
 
 ---
@@ -32,21 +32,21 @@ Status Legend:
 - [x] Admin panel integration: real API login flow, UserMenu display, ChangePassword modal, and AddAdminModal UI
 
 ### 2.2 Vendor & Customer Email + OTP Authentication
-- [ ] OTP generation with cryptographic hashing, TTL expiry (e.g., 5-10 mins), and max attempts
-- [ ] Email OTP delivery via existing Handlebars + Nodemailer email service
-- [ ] Rate limiting for OTP request and verification endpoints
-- [ ] Vendor registration / login via Email + OTP
-- [ ] Customer registration / login via Email + OTP
-- [ ] JWT token issuance with role payloads (`VENDOR`, `CUSTOMER`)
-- [ ] Strict multi-tenant authorization middleware (verifying resource ownership)
-- [ ] Unified identifier lookup in `request-otp` (email or mobile → vendor/customer role; OTP delivered by email in v1)
+- [x] OTP generation with cryptographic hashing (HMAC-SHA256), 10-minute expiry, 5 attempts, 30 s resend cooldown, 5 codes/hour per email, one-time use
+- [x] Email OTP delivery via existing Handlebars + Nodemailer email service (`templates/auth/otp_code.hbs`)
+- [x] Rate limiting for OTP request and verification endpoints (`otpRateLimiter` per IP + per-email limits)
+- [x] Vendor registration / login via Email + OTP (`purpose: register` creates the vendor after verification)
+- [x] Customer login via Email + OTP. Customers do not self-register; their vendor adds them (design decision).
+- [x] JWT token issuance with role payloads (`vendor`, `customer`)
+- [x] Strict multi-tenant authorization: role guard on every vendor/customer route, all queries scoped by `vendorId` / `customerId`
+- [x] Unified identifier lookup (`POST /auth/lookup`, email or mobile → vendor/customer role; OTP delivered by email in v1, destination masked)
 
 ### 2.3 Security Hardening (Phase 0, from 20 Nov 2026 audit)
-- [ ] Role guard on all protected `/vendor/*` routes (currently any valid token passes)
+- [x] Role guard on all protected `/vendor/*` routes
 - [ ] Admin tokens carry the admin's real role (currently always `super_admin`)
-- [ ] Remove logging of vendor records/password hashes in vendor login
-- [ ] Tune global rate limit so normal PWA usage is not throttled
-- [ ] Deactivated vendors/customers are rejected even with an unexpired token
+- [x] Remove logging of vendor records/password hashes (and the request body with the plaintext password) in vendor login
+- [x] Tune global rate limit so normal PWA usage is not throttled (100 → 600 per 15 min per IP)
+- [~] Deactivated vendors/customers are rejected at OTP lookup and verification; an already-issued token still works until it expires
 
 ---
 
@@ -55,8 +55,8 @@ Status Legend:
 ### 3.1 Vendor Profile & Business Settings
 - [x] Basic vendor registration (email/password) & profile retrieval
 - [x] Profile picture upload and storage
-- [ ] Extended vendor business details (Business Name, Address, City, State, Country, Postal Code, GST/Tax Number, Logo)
-- [ ] Update vendor business profile endpoint
+- [~] Extended vendor business details: business name/type, GSTIN, GST-registered flag, address, city, state, PIN code, UPI ID. Country and logo not added yet.
+- [x] Update vendor business profile endpoint (`PUT /vendor/profile`, also used for onboarding)
 
 ### 3.2 Product Management
 - [x] Product model with name, description, price, quantity, unlimitedStock, images
@@ -65,18 +65,18 @@ Status Legend:
 - [x] Get single product details
 - [x] Update product details and images
 - [x] Delete product
-- [ ] Support SKU, Unit, and Category fields on Product model
-- [ ] Per-product GST rate and HSN code; brand field
+- [x] Support SKU (unique per vendor), Unit, and Category (global table) on Product
+- [x] Per-product GST rate (0/5/12/18/28) and HSN code; brand (global table)
 - [ ] Product list pagination and search (name, SKU, category)
 - [ ] Soft-delete products referenced by invoices
-- [ ] Currency / price representation audit (integer paise/cents vs decimal)
-- [ ] Vendor invoice settings (prefix, default payment terms, default note)
-- [ ] Vendor dashboard metrics endpoint
+- [x] Money representation decided: whole Indian rupees as `Int` everywhere; invoice math rounds GST per line to the rupee
+- [x] Vendor invoice settings (`GET/PUT /vendor/settings`: prefix, next number, default GST, payment terms, note, notification toggles)
+- [x] Vendor dashboard metrics endpoint (`GET /vendor/invoices/summary`)
 
 ### 3.3 Customer Management (Vendor Scope)
-- [ ] Customer entity creation and relationship design
-- [ ] Vendor Customer CRUD (Create, Read, Update, Deactivate)
-- [ ] Search and filter customers by name, email, and phone
+- [x] Customer entity creation and relationship design (global `Customer` + per-vendor `VendorCustomer`)
+- [~] Vendor Customer CRUD: create, read, update done; deactivate not yet
+- [x] Search and filter customers by name, email, and phone
 - [ ] Quick customer creation during invoice generation flow
 
 ---
@@ -84,23 +84,23 @@ Status Legend:
 ## 4. Invoice & Billing Engine
 
 ### 4.1 Invoice Data Model & Immutability
-- [ ] Invoice entity (`invoiceNumber`, `vendorId`, `customerId`, `invoiceDate`, `dueDate`, `subtotal`, `discountAmount`, `taxAmount`, `totalAmount`, `currency`, `paymentStatus`, `status`, `pdfUrl`, `notes`)
-- [ ] Invoice Item entity with product snapshot (`productNameSnapshot`, `productSkuSnapshot`, `quantity`, `unitPrice`, `discountAmount`, `taxAmount`, `totalAmount`)
-- [ ] Ensure historical invoice immutability (price/name updates on products do not alter existing invoices)
+- [x] Invoice entity (`invoiceNumber`, `vendorId`, `customerId`, `invoiceDate`, `dueDate`, `subtotal`, `discountAmount`, `taxAmount`, `totalAmount`, `currency`, `paymentStatus`, `status`, `pdfUrl`, `notes`)
+- [x] Invoice Item entity with product snapshot (`productNameSnapshot`, `productSkuSnapshot`, `quantity`, `unitPrice`, `discountAmount`, `taxAmount`, `totalAmount`)
+- [x] Ensure historical invoice immutability (price/name updates on products and customers do not alter existing invoices; verified end-to-end)
 
 ### 4.2 Invoice Creation & Calculation
-- [ ] Transactional invoice creation endpoint (`POST /api/v1/invoices` or `/api/v1/vendor/invoices`)
-- [ ] Authoritative backend total calculation (frontend preview only)
-- [ ] Concurrent-safe sequential invoice number generator (`INV-YYYY-XXXXXX`), per vendor per financial year
-- [ ] Initial payment status assignment (`PENDING`)
-- [ ] CGST/SGST vs IGST split from place of supply; seller and buyer snapshots on the invoice
+- [x] Transactional invoice creation endpoint (`POST /api/v1/vendor/invoices`)
+- [x] Authoritative backend total calculation (frontend preview only; same algorithm, tested on both sides)
+- [~] Concurrent-safe sequential invoice number generator (`<prefix>000001`, default prefix `INV-YYYY-`), per vendor. Automatic reset per financial year not implemented yet.
+- [x] Initial payment status assignment (`PENDING`)
+- [x] CGST/SGST vs IGST split (vendor state vs customer state); seller and buyer snapshots on the invoice
 
 ### 4.3 Invoice Payment Tracking
-- [ ] Update payment status endpoint (`PENDING` -> `PAID`) restricted to vendor
-- [ ] Record payment mode and paid-at timestamp
-- [ ] Customer invoice status read-only access
-- [ ] Derived "overdue" (`PENDING` and past due date); never stored as a status
-- [ ] Record first customer view (`viewedAt`) for the payment-progress timeline
+- [x] Update payment status endpoint (`PATCH /vendor/invoices/:id/payment`) restricted to vendor
+- [x] Record payment mode and paid-at timestamp
+- [x] Customer invoice status read-only access (`GET /customer/invoices`, across all vendors)
+- [x] Derived "overdue" (`PENDING` and past due date in IST); never stored as a status
+- [x] Record first customer view (`viewedAt`) for the payment-progress timeline
 
 ### 4.4 PDF Generation
 - [ ] Professional Handlebars HTML invoice template (Vendor branding, Customer info, line items, summary totals, payment notes)
@@ -118,7 +118,7 @@ Status Legend:
 - [ ] Vendor Management screen (detailed view of vendor products, invoices, and activity)
 - [ ] Global Customer Management screen
 - [ ] Platform Invoices & Payment oversight screen
-- [ ] Global categories/settings management
+- [~] Global categories and brands: admin API done (`/catalog/categories`, `/catalog/brands`); admin panel screen not built
 
 ---
 
@@ -189,5 +189,16 @@ _`[~]` = UI built on mock data (Phase 7); completes when connected to the real A
 - [x] Verify build, five calculation tests, core browser interactions, responsive widths and production offline reload.
 - [x] Updated unified login screen (Figma node 2:58283, 18 November 2026): one login for everyone via email or mobile number, role resolved from the account, "Register your business" for owners, customers onboarded by their vendor.
 - [ ] Complete direct pixel comparison for frames unavailable after the Figma Starter-plan tool limit. See website/DESIGN_HANDOFF.md for scope.
-- [ ] Integrate production authentication, authorization, authoritative invoice calculations, PDF delivery and API persistence in a future implementation.
-- [ ] Replace mock services with HTTP adapters behind the existing `AuthService`/`BillingService` contracts (`VITE_USE_MOCK` toggle), and remove the stored `OVERDUE` status from the PWA types.
+- [~] Integrate production authentication, authorization, authoritative invoice calculations and API persistence (done); PDF delivery pending.
+- [x] Replace mock services with HTTP adapters behind the existing `AuthService`/`BillingService` contracts (`VITE_DATA_SOURCE=mock|api`). `OVERDUE` is now display-only: derived from the server's `isOverdue` (API) or the reference date (mock).
+
+---
+
+## 8. Demo Data & Credentials (21 November 2026)
+
+- [x] Backend demo seed (`npm run db:seed`, idempotent): Super Admin, two vendors (Gujarat and Kerala), 9 products, 7 customers (one shared across both vendors), 10 invoices covering paid, pending, overdue, IGST, B2B GSTIN and discount cases. Invoices are created through the real invoice service.
+- [x] Fixed demo OTP via `DEMO_OTP_CODE` (ignored when `NODE_ENV=production`); with `DISABLE_EMAIL=true` the code is also logged in development.
+- [x] PWA mock data (`website/src/data/demo.json`) mirrors the seed, so mock and API mode show the same bills and totals.
+- [x] Demo account shortcuts on the PWA sign-in screen (always in mock mode; in API mode only with `VITE_SHOW_DEMO_LOGINS=true`).
+- [x] Verified end to end: 58 API checks (auth, ownership, math, concurrency, immutability) and a headless-browser run of the PWA in API mode.
+

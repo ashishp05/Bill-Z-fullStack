@@ -8,6 +8,7 @@ import { VendorService } from '../services/vendor.service';
 import {
   VendorLoginInput,
   VendorRegisterInput,
+  VendorSettingsInput,
   VendorUpdateProfileInput,
 } from '../types/vendor.types';
 
@@ -20,7 +21,6 @@ export class VendorController {
   };
 
   login = async (req: Request<{}, {}, VendorLoginInput>, res: Response): Promise<void> => {
-    console.log('req.body', req.body);
     const result = await this.vendorService.login(req.body);
     sendJsonResponse(res, result, ResponseMessages.LOGIN_SUCCESSFUL, StatusCodes.OK);
   };
@@ -70,5 +70,18 @@ export class VendorController {
     const filePath = file.url || file.localPath;
     const updated = await this.vendorService.updateProfilePicture(vendorId, filePath);
     sendJsonResponse(res, updated, ResponseMessages.PROFILE_UPDATED_SUCCESS, StatusCodes.OK);
+  };
+
+  getSettings = async (req: Request, res: Response): Promise<void> => {
+    const settings = await this.vendorService.getSettings(req.userId as string);
+    sendJsonResponse(res, settings, ResponseMessages.SETTINGS_FETCHED, StatusCodes.OK);
+  };
+
+  updateSettings = async (
+    req: Request<{}, {}, VendorSettingsInput>,
+    res: Response,
+  ): Promise<void> => {
+    const settings = await this.vendorService.updateSettings(req.userId as string, req.body);
+    sendJsonResponse(res, settings, ResponseMessages.SETTINGS_UPDATED, StatusCodes.OK);
   };
 }

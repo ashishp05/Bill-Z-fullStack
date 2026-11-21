@@ -1,17 +1,6 @@
-export interface AddProductPayload {
-  name: string;
-  description?: string;
-  price: number;
-  quantity: number;
-  unlimitedStock: boolean;
-  images?: string[];
-}
+import { z } from 'zod';
 
-export interface UpdateProductPayload {
-  name?: string;
-  description?: string;
-  price?: number;
-  quantity?: number;
-  unlimitedStock?: boolean;
-  images?: string[];
-}
+import { addProductSchema, updateProductSchema } from '../schemas/product.schema';
+
+export type AddProductPayload = z.infer<typeof addProductSchema> & { images?: string[] };
+export type UpdateProductPayload = z.infer<typeof updateProductSchema> & { images?: string[] };

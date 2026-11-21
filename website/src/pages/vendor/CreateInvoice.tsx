@@ -26,8 +26,9 @@ import type {
   InvoiceRecord,
   ProductItem,
 } from "../../types/billing.types";
-import { formatINR } from "../../utils/indianFormat";
+import { formatINR, todayISODate } from "../../utils/indianFormat";
 import seed from "../../data/demo.json";
+import { USE_API } from "../../config/dataSource";
 import { invoiceTotals } from "../../utils/invoiceMath";
 interface Draft {
   step: number;
@@ -38,7 +39,27 @@ interface Draft {
   notes: string;
   discount: number;
 }
-const draftKey = "billz-invoice-draft-v1";
+const draftKey = "billz-invoice-draft-v2";
+/** Mock mode uses the design's reference date as "today" so the demo stays consistent. */
+const draftToday = () =>
+  USE_API ? todayISODate() : seed.referenceDate;
+/** Pre-fill the design example (2 kettles + 3 flasks) using the vendor's real products, matched by SKU. */
+const exampleItems = (products: ProductItem[]): InvoiceLineItem[] =>
+  seed.invoices[0].items.flatMap((item) => {
+    const product = products.find((p) => p.sku === item.sku && p.active);
+    return product
+      ? [
+          {
+            ...item,
+            productId: product.id,
+            name: product.name,
+            unitPrice: product.price,
+            gstRate: product.gstRate,
+            lineTotal: product.price * item.quantity,
+          },
+        ]
+      : [];
+  });
 export function CreateInvoice() {
   const { profile, products, customers, preferences, addInvoice } =
     useBilling();
@@ -60,10 +81,10 @@ export function CreateInvoice() {
     return {
       step: 1,
       customerId: location.state?.customerId || customers[0]?.id || "",
-      items: structuredClone(seed.invoices[0].items),
-      invoiceDate: seed.referenceDate,
+      items: exampleItems(products),
+      invoiceDate: draftToday(),
       dueDate: new Date(
-        new Date(seed.referenceDate + "T12:00:00Z").getTime() +
+        new Date(draftToday() + "T12:00:00Z").getTime() +
           preferences.paymentTerms * 86400000,
       )
         .toISOString()
@@ -89,7 +110,7 @@ export function CreateInvoice() {
   const preview: InvoiceRecord = {
     id: "draft",
     invoiceNumber:
-      preferences.prefix + String(preferences.nextNumber).padStart(4, "0"),
+      preferences.prefix + String(preferences.nextNumber).padStart(6, "0"),
     vendorId: "vendor-1",
     vendorName: profile.businessName,
     vendorEmail: profile.email,

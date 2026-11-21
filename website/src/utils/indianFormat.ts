@@ -38,6 +38,9 @@ export const formatDateIndian = (dateInput: string | Date | undefined): string =
   });
 };
 
+/** Today's date as YYYY-MM-DD in the device's time zone (not UTC). */
+export const todayISODate = (): string => new Date().toLocaleDateString('en-CA');
+
 export const formatTimeIndian = (dateInput: string | Date | undefined): string => {
   if (!dateInput) return '';
   const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;

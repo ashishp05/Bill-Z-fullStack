@@ -5,21 +5,27 @@ import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/Button";
 import { Card } from "../../components/common/Card";
 import { Input } from "../../components/common/Input";
-import { Avatar, Status } from "../../components/common/Design";
+import { Avatar, ErrorMessage, Status } from "../../components/common/Design";
 export function CustomerProfile() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, saveCustomerProfile, logout } = useAuth();
   const navigate = useNavigate();
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   const [name, setName] = useState(user?.role === "customer" ? user.name : "");
   const [phone, setPhone] = useState(
     user?.role === "customer" ? user.phone || "" : "",
   );
-  function save(e: FormEvent) {
+  async function save(e: FormEvent) {
     e.preventDefault();
-    updateUser({ name, phone });
-    setSaved(true);
-    setEdit(false);
+    setError("");
+    try {
+      await saveCustomerProfile({ name, phone });
+      setSaved(true);
+      setEdit(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save your profile.");
+    }
   }
   return (
     <div className="stack">
@@ -34,13 +40,14 @@ export function CustomerProfile() {
           </div>
         </div>
       </Card>
+      <ErrorMessage>{error}</ErrorMessage>
       {saved && (
         <p className="saved-message" role="status">
           Profile updated.
         </p>
       )}
       {edit ? (
-        <form className="form-stack" onSubmit={save}>
+        <form className="form-stack" onSubmit={(e) => void save(e)}>
           <Input
             label="Full name *"
             value={name}

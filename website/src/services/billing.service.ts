@@ -1,4 +1,7 @@
 import seed from "../data/demo.json";
+import { USE_API } from "../config/dataSource";
+import { apiBillingService } from "../api/billing.adapter";
+import { buildTimeline, displayStatus } from "../utils/invoiceTimeline";
 import type {
   CustomerItem,
   InvoiceRecord,
@@ -14,17 +17,24 @@ export interface BillingData {
   customers: CustomerItem[];
   invoices: InvoiceRecord[];
   preferences: Preferences;
+  /** Global category and brand names managed by the Super Admin. */
+  categories: string[];
+  brands: string[];
 }
 export type NewInvoice = Omit<
   InvoiceRecord,
   "id" | "invoiceNumber" | "timeline"
 >;
-/** Replace this adapter with HTTP calls when the API is ready. UI components depend only on this contract. */
+/** Account fields that are saved together with the business profile during onboarding. */
+export type ProfilePatch = Partial<VendorBusinessProfile> & {
+  firstName?: string;
+  lastName?: string;
+  businessType?: string;
+};
+/** UI components depend only on this contract. Mock and API adapters both implement it. */
 export interface BillingService {
   getData(): Promise<BillingData>;
-  saveProfile(
-    patch: Partial<VendorBusinessProfile>,
-  ): Promise<VendorBusinessProfile>;
+  saveProfile(patch: ProfilePatch): Promise<VendorBusinessProfile>;
   saveProduct(
     product: Omit<ProductItem, "id"> & { id?: string },
   ): Promise<ProductItem>;
@@ -40,8 +50,16 @@ export interface BillingService {
   ): Promise<InvoiceRecord>;
   savePreferences(patch: Partial<Preferences>): Promise<Preferences>;
 }
-const storageKey = "billz-demo-data-v1";
+
+const storageKey = "billz-demo-data-v2";
 const clone = <T>(value: T): T => structuredClone(value);
+/** The mock treats the design's reference date as "today", so overdue bills stay stable. */
+const mockToday = seed.referenceDate;
+const withDerived = (invoice: InvoiceRecord): InvoiceRecord => {
+  const stored = invoice.status === "PAID" ? "PAID" : "PENDING";
+  const status = displayStatus(stored, invoice.dueDate, mockToday);
+  return { ...invoice, status, timeline: buildTimeline({ ...invoice, status }) };
+};
 function initialData(): BillingData {
   try {
     const stored = JSON.parse(
@@ -54,15 +72,7 @@ function initialData(): BillingData {
       stored.profile &&
       stored.preferences
     )
-      return {
-        ...stored,
-        products: stored.products.map((product) => {
-          const original = seed.products.find((p) => p.id === product.id);
-          return original && original.imageUrl === product.imageUrl
-            ? { ...original, ...product }
-            : product;
-        }),
-      };
+      return { ...clone(seed), ...stored } as unknown as BillingData;
   } catch {
     /* Invalid cached demo data must not prevent opening the app. */
   }
@@ -76,12 +86,19 @@ const persist = () => {
     /* The session still works without storage. */
   }
 };
-export const billingService: BillingService = {
+/** UI simulation only: numbering, totals and payment rules are enforced by the API in production. */
+export const mockBillingService: BillingService = {
   async getData() {
-    return clone(data);
+    return clone({ ...data, invoices: data.invoices.map(withDerived) });
   },
   async saveProfile(patch) {
-    data.profile = { ...data.profile, ...patch };
+    const {
+      firstName: _firstName,
+      lastName: _lastName,
+      businessType: _businessType,
+      ...profile
+    } = patch;
+    data.profile = { ...data.profile, ...profile };
     persist();
     return clone(data.profile);
   },
@@ -115,77 +132,25 @@ export const billingService: BillingService = {
     const next = highest + 1;
     const saved: InvoiceRecord = {
       ...clone(invoice),
+      status: "PENDING",
       id: crypto.randomUUID(),
-      invoiceNumber: `${data.preferences.prefix}${String(next).padStart(4, "0")}`,
-      timeline: [
-        {
-          step: 1,
-          title: "Invoice created",
-          description: "Invoice generated in Bill-Z",
-          date: invoice.invoiceDate,
-          completed: true,
-          iconType: "sent",
-        },
-        {
-          step: 2,
-          title: "Viewed by customer",
-          description: "Awaiting customer view",
-          completed: false,
-          iconType: "viewed",
-        },
-        {
-          step: 3,
-          title: "Payment pending",
-          description: `Due ${invoice.dueDate}`,
-          completed: false,
-          current: true,
-          iconType: "pending",
-        },
-        {
-          step: 4,
-          title: "Payment received",
-          description: "Awaiting payment",
-          completed: false,
-          iconType: "received",
-        },
-      ],
+      invoiceNumber: `${data.preferences.prefix}${String(next).padStart(6, "0")}`,
+      timeline: [],
     };
     data.invoices = [saved, ...data.invoices];
     data.preferences.nextNumber = next + 1;
     persist();
-    return clone(saved);
+    return withDerived(clone(saved));
   },
   async updatePayment(id, status, paymentMode) {
     const invoice = data.invoices.find((i) => i.id === id);
     if (!invoice) throw new Error("Invoice not found");
-    invoice.status = status;
-    invoice.paymentMode = paymentMode;
-    invoice.paidAt = status === "PAID" ? new Date().toISOString() : undefined;
-    invoice.timeline = invoice.timeline.map((t) =>
-      t.step >= 3
-        ? {
-            ...t,
-            title:
-              t.step === 3
-                ? status === "PAID"
-                  ? "Payment confirmed"
-                  : "Payment pending"
-                : "Payment received",
-            description:
-              status === "PAID"
-                ? t.step === 4
-                  ? `Received via ${paymentMode || "recorded payment"}`
-                  : "Payment recorded by vendor"
-                : t.step === 3
-                  ? `Due ${invoice.dueDate}`
-                  : "Awaiting payment",
-            completed: status === "PAID",
-            current: t.step === 3 && status !== "PAID",
-          }
-        : t,
-    );
+    const paid = status === "PAID";
+    invoice.status = paid ? "PAID" : "PENDING";
+    invoice.paymentMode = paid ? paymentMode : undefined;
+    invoice.paidAt = paid ? new Date().toISOString() : undefined;
     persist();
-    return clone(invoice);
+    return withDerived(clone(invoice));
   },
   async savePreferences(patch) {
     data.preferences = { ...data.preferences, ...patch };
@@ -193,6 +158,11 @@ export const billingService: BillingService = {
     return clone(data.preferences);
   },
 };
+
+export const billingService: BillingService = USE_API
+  ? apiBillingService
+  : mockBillingService;
+
 export function resetDemoData() {
   data = clone(seed) as unknown as BillingData;
   persist();

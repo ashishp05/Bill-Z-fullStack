@@ -1,7 +1,8 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { authService } from "../services/auth.service";
-import type { DemoSession } from "../services/auth.service";
+import type { DemoSession, OtpPurpose } from "../services/auth.service";
+import { SESSION_KEY } from "../api/client";
 import type {
   AuthUser,
   UserRole,
@@ -12,8 +13,8 @@ import type {
 } from "../types/auth.types";
 function restore(): DemoSession | null {
   try {
-    const v = JSON.parse(localStorage.getItem("billz-demo-session") || "null");
-    return v?.token?.startsWith("demo-") &&
+    const v = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    return typeof v?.token === "string" &&
       ["vendor", "customer"].includes(v?.user?.role)
       ? v
       : null;
@@ -28,20 +29,29 @@ function useAuthState() {
     setSession(next);
     setRole(next.user.role);
     try {
-      localStorage.setItem("billz-demo-session", JSON.stringify(next));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
     } catch {
       /* In-memory session remains usable. */
     }
   };
-  const verifyOtp = async (email: string, code: string, nextRole: UserRole) =>
-    save(await authService.verifyOtp(email, code, nextRole));
+  const verifyOtp = async (
+    email: string,
+    code: string,
+    nextRole: UserRole,
+    purpose: OtpPurpose = "login",
+  ) => save(await authService.verifyOtp(email, code, nextRole, purpose));
   const updateUser = (patch: Partial<AuthUser>) => {
     if (session)
       save({ ...session, user: { ...session.user, ...patch } as AuthUser });
   };
+  /** Customers edit their own name and mobile; vendors save theirs with the business profile. */
+  const saveCustomerProfile = async (patch: { name?: string; phone?: string }) => {
+    const saved = await authService.updateCustomerProfile(patch);
+    updateUser(saved);
+  };
   const logout = () => {
     setSession(null);
-    localStorage.removeItem("billz-demo-session");
+    localStorage.removeItem(SESSION_KEY);
   };
   const legacyLogin = async (_data: VendorLoginInput | CustomerLoginInput) => {
     throw new Error("Use email verification to sign in to this demo.");
@@ -62,6 +72,7 @@ function useAuthState() {
     requestOtp: authService.requestOtp,
     verifyOtp,
     updateUser,
+    saveCustomerProfile,
     logout,
     loginVendor: legacyLogin,
     loginCustomer: legacyLogin,

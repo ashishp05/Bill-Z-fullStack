@@ -1,41 +1,53 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import seed from "../data/demo.json";
+import { USE_API } from "../config/dataSource";
+import { emptyBillingData } from "../data/emptyBillingData";
+import { useAuth } from "./AuthContext";
 import { billingService } from "../services/billing.service";
 import type {
   BillingData,
   NewInvoice,
   Preferences,
+  ProfilePatch,
 } from "../services/billing.service";
 import type {
   CustomerItem,
   ProductItem,
-  VendorBusinessProfile,
   InvoicePaymentStatus,
 } from "../types/billing.types";
 
 function useBillingState() {
-  const [data, setData] = useState<BillingData>(seed as unknown as BillingData);
-  const [isLoading, setLoading] = useState(true);
+  // Mock mode renders the design data immediately; API mode starts empty until loaded.
+  const [data, setData] = useState<BillingData>(() =>
+    USE_API ? emptyBillingData() : (seed as unknown as BillingData),
+  );
   const [error, setError] = useState("");
+  // Reload whenever the signed-in account changes (login, logout, switching role).
+  const { token } = useAuth();
+  // The token whose data is currently loaded; loading until it matches the session.
+  const [loadedFor, setLoadedFor] = useState<string | null | undefined>(undefined);
+  const isLoading = loadedFor !== token;
   useEffect(() => {
     let active = true;
     billingService
       .getData()
       .then((value) => {
-        if (active) setData(value);
+        if (!active) return;
+        setData(value);
+        setError("");
       })
       .catch((e) => {
-        if (active) setError(String(e));
+        if (active) setError(e instanceof Error ? e.message : String(e));
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) setLoadedFor(token);
       });
     return () => {
       active = false;
     };
-  }, []);
-  const updateProfile = async (patch: Partial<VendorBusinessProfile>) => {
+  }, [token]);
+  const updateProfile = async (patch: ProfilePatch) => {
     const profile = await billingService.saveProfile(patch);
     setData((d) => ({ ...d, profile }));
   };

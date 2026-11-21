@@ -256,7 +256,7 @@ export function SettingsPage({
             </div>
             <Notice>
               Next invoice: {options.prefix}
-              {String(options.nextNumber).padStart(4, "0")}. Numbers are unique
+              {String(options.nextNumber).padStart(6, "0")}. Numbers are unique
               and sequential.
             </Notice>
             <h2>Tax & payment defaults</h2>

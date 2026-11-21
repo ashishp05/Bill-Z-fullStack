@@ -27,6 +27,19 @@ const authRateLimiter = rateLimit({
   },
 });
 
+// OTP routes: per-email limits in the OTP service do the real brute-force protection.
+const otpRateLimiter = rateLimit({
+  windowMs: RATE_LIMIT.OTP_WINDOW_MS,
+  max: RATE_LIMIT.OTP_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+  message: {
+    success: false,
+    message: ValidationMessages.TOO_MANY_REQUESTS,
+  },
+});
+
 // Middleware to check host whitelist
 /**
  * The function `hostWhitelist` checks if the request origin is in the allowed URLs whitelist and
@@ -62,4 +75,4 @@ const hostWhitelist = (allowedUrls: string[]) => {
   };
 };
 
-export { authRateLimiter, hostWhitelist, rateLimiter };
+export { authRateLimiter, hostWhitelist, otpRateLimiter, rateLimiter };

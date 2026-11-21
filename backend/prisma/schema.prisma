@@ -9,6 +9,23 @@ datasource db {
   provider = "postgresql"
 }
 
+// Money is stored as whole Indian rupees (Int) everywhere. Invoice math rounds to the rupee.
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum OtpRole {
+  VENDOR
+  CUSTOMER
+}
+
+enum OtpPurpose {
+  LOGIN
+  REGISTER
+}
+
 model Admin {
   id        String   @id @default(uuid())
   name      String
@@ -46,41 +63,258 @@ model Roles {
 }
 
 model Vendor {
-  id             String   @id @default(uuid())
-  firstName      String
-  lastName       String
-  email          String   @unique
-  password       String
-  businessName   String?
-  phoneCountry   String?
-  phoneNumber    String?
-  profilePicture String?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  firstName       String   @default("")
+  lastName        String   @default("")
+  email           String   @unique
+  // Optional: vendors sign in with email OTP. Kept for the legacy password login.
+  password        String?
+  businessName    String?
+  businessType    String?
+  gstin           String?
+  isRegisteredGST Boolean  @default(false)
+  phoneCountry    String?
+  phoneNumber     String?
+  address         String?
+  city            String?
+  state           String?
+  pincode         String?
+  upiId           String?
+  profilePicture  String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relationships
-  products Product[]
+  products  Product[]
+  settings  VendorSettings?
+  customers VendorCustomer[]
+  invoices  Invoice[]
 
   @@index([email])
+  @@index([phoneNumber])
   @@map("vendors")
+}
+
+model VendorSettings {
+  id                String   @id @default(uuid())
+  vendorId          String   @unique
+  invoicePrefix     String   @default("INV-")
+  // Next sequence number. Incremented atomically inside the invoice transaction.
+  nextInvoiceNumber Int      @default(1)
+  defaultGstRate    Int      @default(18)
+  paymentTermsDays  Int      @default(7)
+  invoiceNote       String?
+  showGst           Boolean  @default(true)
+  emailInvoices     Boolean  @default(true)
+  paymentUpdates    Boolean  @default(true)
+  weeklySummary     Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_settings")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@map("brands")
 }
 
 model Product {
   id             String   @id @default(uuid())
   name           String
   description    String?
+  sku            String?
+  hsn            String?
+  unit           String   @default("Pcs")
+  // Whole rupees, exclusive of tax.
   price          Int
+  gstRate        Int      @default(18)
+  // Legacy stock fields: billing only, no stock logic reads them.
   quantity       Int      @default(0)
   unlimitedStock Boolean  @default(false)
   vendorId       String
+  categoryId     String?
+  brandId        String?
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  vendor Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  images String[] @default([])
+  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand        Brand?        @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  images       String[]      @default([])
+  invoiceItems InvoiceItem[]
 
+  @@unique([vendorId, sku])
   @@index([vendorId])
+  @@index([categoryId])
+  @@index([brandId])
   @@map("products")
+}
+
+// Global customer identity: one row per person, used for OTP login across vendors.
+model Customer {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendorLinks VendorCustomer[]
+  invoices    Invoice[]
+
+  @@index([phone])
+  @@map("customers")
+}
+
+// A vendor's own record of a customer (name, address and GSTIN as that vendor knows them).
+model VendorCustomer {
+  id         String   @id @default(uuid())
+  vendorId   String
+  customerId String
+  name       String
+  email      String
+  phone      String?
+  gstin      String?
+  address    String?
+  city       String?
+  state      String?
+  pincode    String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  vendor   Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([vendorId, customerId])
+  @@index([vendorId])
+  @@index([customerId])
+  @@map("vendor_customers")
+}
+
+// Immutable once created: vendor and customer details are snapshotted. Only payment fields change.
+model Invoice {
+  id               String        @id @default(uuid())
+  invoiceNumber    String
+  vendorId         String
+  vendorCustomerId String
+  customerId       String
+  invoiceDate      DateTime      @db.Date
+  dueDate          DateTime      @db.Date
+  interState       Boolean       @default(false)
+  subtotal         Int
+  discount         Int           @default(0)
+  cgst             Int           @default(0)
+  sgst             Int           @default(0)
+  igst             Int           @default(0)
+  totalTax         Int
+  totalAmount      Int
+  notes            String?
+  status           PaymentStatus @default(PENDING)
+  paymentMode      String?
+  paidAt           DateTime?
+  viewedAt         DateTime?
+  pdfKey           String?
+
+  vendorBusinessName String
+  vendorGstin        String?
+  vendorEmail        String
+  vendorPhone        String?
+  vendorAddress      String?
+  vendorCity         String?
+  vendorState        String?
+  vendorPincode      String?
+  vendorUpiId        String?
+
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  customerGstin   String?
+  customerAddress String?
+  customerCity    String?
+  customerState   String?
+  customerPincode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor         Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorCustomer VendorCustomer @relation(fields: [vendorCustomerId], references: [id], onDelete: NoAction)
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: NoAction)
+  items          InvoiceItem[]
+
+  @@unique([vendorId, invoiceNumber])
+  @@index([vendorId, status])
+  @@index([vendorId, invoiceDate])
+  @@index([vendorCustomerId])
+  @@index([customerId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id            String   @id @default(uuid())
+  invoiceId     String
+  productId     String?
+  name          String
+  sku           String?
+  hsn           String?
+  unit          String?
+  quantity      Int
+  unitPrice     Int
+  gstRate       Int
+  // unitPrice x quantity, before discount and tax.
+  lineTotal     Int
+  discountShare Int      @default(0)
+  taxableAmount Int
+  taxAmount     Int
+  createdAt     DateTime @default(now())
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@map("invoice_items")
+}
+
+// Shared by vendor and customer login. Only the hash of the code is stored.
+model OtpVerification {
+  id                String     @id @default(uuid())
+  email             String
+  role              OtpRole
+  purpose           OtpPurpose
+  codeHash          String
+  attempts          Int        @default(0)
+  expiresAt         DateTime
+  resendAvailableAt DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime   @default(now())
+
+  @@index([email, role, purpose])
+  @@index([expiresAt])
+  @@map("otp_verifications")
 }

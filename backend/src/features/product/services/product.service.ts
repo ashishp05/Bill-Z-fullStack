@@ -2,18 +2,28 @@ import { PrismaClient } from '@prisma/client';
 
 import { ValidationMessages } from '../../../constants/messages';
 import { ApiError } from '../../../utils/api-error.util';
+import { CatalogRepository } from '../../catalog/repositories/catalog.repository';
+import { CatalogService } from '../../catalog/services/catalog.service';
 import { ProductRepository } from '../repositories/product.repository';
 import { AddProductPayload, UpdateProductPayload } from '../types/product.types';
 
 export class ProductService {
   private repository: ProductRepository;
+  private catalogService: CatalogService;
 
   constructor(prisma: PrismaClient) {
     this.repository = new ProductRepository(prisma);
+    this.catalogService = new CatalogService(new CatalogRepository(prisma));
   }
 
   async createProduct(vendorId: string, payload: AddProductPayload) {
+    await this.assertCatalogReferences(payload);
     return this.repository.createProduct(vendorId, payload);
+  }
+
+  private async assertCatalogReferences(payload: UpdateProductPayload) {
+    await this.catalogService.assertActive('categories', payload.categoryId);
+    await this.catalogService.assertActive('brands', payload.brandId);
   }
 
   async getProduct(productId: string, vendorId: string) {
@@ -39,6 +49,7 @@ export class ProductService {
     if (product.vendorId !== vendorId) {
       throw new ApiError(403, ValidationMessages.NOT_ALLOWED);
     }
+    await this.assertCatalogReferences(payload);
     return this.repository.updateProduct(productId, payload);
   }
 

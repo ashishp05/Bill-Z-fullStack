@@ -59,15 +59,43 @@ Each decision has a **recommended default**. The plan below assumes these defaul
 
 | ID | Decision | Recommended default | Why |
 |---|---|---|---|
-| D1 | Can one customer buy from several vendors? | **Yes.** A global `Customer` identity (unique email) plus a `VendorCustomer` link that holds each vendor's own name, phone, GSTIN and address. | The PWA has one unified login, and customers are created by vendors. One person who buys from two shops should see both sets of bills under one login. |
+| D1 | Can one customer buy from several vendors? | ✅ **Decided 21 Nov 2026: Yes.** A global `Customer` identity (unique email) plus a `VendorCustomer` link that holds each vendor's own name, phone, GSTIN and address. | The PWA has one unified login, and customers are created by vendors. One person who buys from two shops should see both sets of bills under one login. |
 | D2 | Identity model | Keep `Admin`, `Vendor` and the new `Customer` as **separate auth tables**. Don't use `User`/`Roles`. If one email is both a vendor and a customer, `request-otp` returns both roles and the PWA asks which one to use. | Smallest change, keeps admin separate (rule 7), and avoids rewriting the existing vendor auth. |
-| D3 | Money representation | **`Decimal(14,2)` rupees in the DB** for all money columns, and `Decimal(5,2)` for GST rates. The API sends rupee numbers with 2 decimals. Services calculate in **integer paise** internally (a port of `invoiceMath.ts`). | `Int` paise overflows at ₹2.14 crore, which is too small for B2B invoices. `BigInt` makes JSON handling awkward. Decimal matches the PWA's rupee values. `Product.price Int → Decimal` is a lossless migration. |
+| D3 | Money representation | ✅ **Decided 21 Nov 2026: whole Indian rupees as `Int` everywhere** (prices, totals, tax; GST rounded per line to the rupee). Original recommendation, not adopted: **`Decimal(14,2)` rupees in the DB** for all money columns, and `Decimal(5,2)` for GST rates. The API sends rupee numbers with 2 decimals. Services calculate in **integer paise** internally (a port of `invoiceMath.ts`). | `Int` paise overflows at ₹2.14 crore, which is too small for B2B invoices. `BigInt` makes JSON handling awkward. Decimal matches the PWA's rupee values. `Product.price Int → Decimal` is a lossless migration. |
 | D4 | Invoice numbering | **Per vendor, per Indian financial year (Apr–Mar)**, using an optional vendor prefix (default `INV`): `INV-2026-000001`. Max 16 characters (GST rule 46). | GST law requires one consecutive series per supplier per financial year. A single global series would leak volume across vendors. |
 | D5 | Mobile login | **v1: look up by mobile, but send the OTP to the account's email** and show the masked email. SMS delivery is out of scope until a provider is chosen. | Keeps the PWA's single input field without adding an SMS gateway. |
-| D6 | GST tax model | **Per-product `gstRate`** (0/5/12/18/28), plus optional `hsnCode` and unit. Intra-state means CGST + SGST (half each). Inter-state means IGST. Place of supply = the customer's state, falling back to the vendor's state. | Matches the PWA's UI and demo data. |
-| D7 | Categories / brands | **Free-text `category` and `brand` strings on Product for v1.** Global Category/Brand tables come later, managed by admin. | The PWA only needs a filter. Strings can be normalised into tables later without blocking anything. |
+| D6 | GST tax model | ✅ **Decided 21 Nov 2026: Per-product `gstRate`** (0/5/12/18/28), plus optional `hsnCode` and unit. Intra-state means CGST + SGST (half each). Inter-state means IGST. Place of supply = the customer's state, falling back to the vendor's state. | Matches the PWA's UI and demo data. |
+| D7 | Categories / brands | ✅ **Decided 21 Nov 2026: global `Category` and `Brand` tables now**, managed by admins; products reference them by id. (Original recommendation was free-text strings.) | The PWA only needs a filter. Strings can be normalised into tables later without blocking anything. |
 | D8 | Invoice editing / void | **Immutable. No edit or void in v1.** Only `paymentStatus`, `paymentMode`, `paidAt` and `viewedAt` can change after creation. | Rule 3. A `status`/void column can be added later without breaking anything. |
 | D9 | PDF engine | **Puppeteer** rendering a Handlebars template. Generate on first request, cache the file in the storage facade, and leave the paid/pending status off the PDF so the cache never goes stale. | Reuses the existing Handlebars pipeline. Puppeteer gives a high-quality GST invoice layout. |
+
+---
+
+## ✅ Progress — 21 November 2026
+
+Phases 0 (partly), 1, 2, 3, 4, 5 (except the next-number preview) and 8 are implemented and verified end to end (58 API checks, headless PWA run in API mode). Where the build differs from the phase text below, this section is authoritative.
+
+**Done**
+- Migration `20261121090000_billing_domain` (additive): `Vendor` business fields + optional password, `VendorSettings`, `Category`, `Brand`, extended `Product`, `Customer`, `VendorCustomer`, `Invoice`, `InvoiceItem`, `OtpVerification`, enums `PaymentStatus`, `OtpRole`, `OtpPurpose`.
+- Features (folder-per-layer): `auth` (`/auth/lookup`, `/auth/request-otp`, `/auth/verify-otp`), `catalog` (`/catalog/categories|brands`), `customer` (`/vendor/customers`, `/customer/profile`), `invoice` (`/vendor/invoices`, `/vendor/invoices/summary`, `/vendor/invoices/:id/payment`, `/customer/invoices`). Vendor feature gained `/vendor/settings` and the business profile fields.
+- Phase 0: role guards on vendor routes (A1), password logging removed (A3), global limit raised to 600 (A4), unused product repository removed (A5), backend `npm test` with `node:test` (A14).
+- Demo seed `npm run db:seed` and `DEMO_OTP_CODE`; PWA `demo.json` mirrors it.
+- Phase 8: `website/src/api/{auth,billing}.adapter.ts` behind `VITE_DATA_SOURCE=mock|api`, Vite `/api` proxy, session in `billz-session`, 401 → sign-in.
+
+**Deviations from the phase text**
+- Numbering: `VendorSettings.nextInvoiceNumber` is incremented inside the invoice transaction (row lock), formatted `<prefix><6 digits>`; default prefix `INV-YYYY-`. There is no `InvoiceSequence` table and no automatic financial-year reset yet (the vendor changes the prefix).
+- Auth: account lookup is a separate `POST /auth/lookup` (the PWA design resolves the role before sending the code). If one email is both a vendor and a customer, the vendor account wins unless `role` is passed.
+- `getData()` still loads everything in one go (first 100 invoices/customers); per-resource pagination in the PWA is pending (A13).
+- `OVERDUE` stays in the PWA type as a display-only value, derived from the API's `isOverdue`; it is never sent to or stored by the API.
+- Invoice timelines are built in the PWA (`utils/invoiceTimeline.ts`) from `invoiceDate`, `viewedAt`, `dueDate`, `paidAt`.
+- "Today" (default invoice date, overdue) is the IST date on the server and the device's local date in the PWA.
+
+**Next**
+1. Phase 0 leftovers: admin tokens carry the real admin role (A2); reject deactivated accounts on every request; product pagination/search and soft delete.
+2. Phase 5 leftovers: financial-year numbering (D4), `GET /vendor/invoices/next-number`, customer deactivate.
+3. Phase 6: invoice PDF, admin stats/customers/invoices APIs and screens, admin Category/Brand screen.
+4. Phase 8 leftovers: paginated loading in the PWA, offline guard on invoice creation and payment updates, delete legacy password endpoints and `src/api/auth.api.ts`.
+5. Phase 9: Postman collection.
 
 ---
 

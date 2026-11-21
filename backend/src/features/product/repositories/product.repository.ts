@@ -2,6 +2,12 @@ import { PrismaClient } from '@prisma/client';
 
 import { AddProductPayload, UpdateProductPayload } from '../types/product.types';
 
+// Category and brand names are returned with the product for display.
+const productInclude = {
+  category: { select: { id: true, name: true } },
+  brand: { select: { id: true, name: true } },
+};
+
 export class ProductRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -13,12 +19,14 @@ export class ProductRepository {
         vendorId,
         images: images && images.length > 0 ? images : [],
       },
+      include: productInclude,
     });
   }
 
   async getProductById(productId: string) {
     return this.prisma.product.findUnique({
       where: { id: productId },
+      include: productInclude,
     });
   }
 
@@ -28,6 +36,7 @@ export class ProductRepository {
       orderBy: {
         createdAt: 'desc',
       },
+      include: productInclude,
     });
   }
 
@@ -39,6 +48,7 @@ export class ProductRepository {
         ...productData,
         ...(images && images.length > 0 ? { images } : {}),
       },
+      include: productInclude,
     });
   }
 

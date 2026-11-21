@@ -11,20 +11,23 @@ import {
   Select,
 } from "../../components/common/Design";
 import seed from "../../data/demo.json";
+import { USE_API } from "../../config/dataSource";
 export function CustomerForm() {
   const { id } = useParams();
-  const { customers, addCustomer, updateCustomer } = useBilling();
+  const { customers, profile, addCustomer, updateCustomer } = useBilling();
   const navigate = useNavigate();
   const location = useLocation();
   const existing = customers.find((c) => c.id === id);
+  // Mock mode pre-fills the design example; with the API a new customer starts blank.
+  const example = USE_API ? undefined : seed.customers[0];
   const [form, setForm] = useState({
-    name: existing?.name || seed.customers[0].name,
-    email: existing?.email || seed.customers[0].email,
-    phone: existing?.phone || seed.customers[0].phone,
-    address: existing?.address || seed.customers[0].address,
-    city: existing?.city || "Ahmedabad",
-    pincode: existing?.pincode || "380009",
-    state: existing?.state || "Gujarat",
+    name: existing?.name || example?.name || "",
+    email: existing?.email || example?.email || "",
+    phone: existing?.phone || example?.phone || "",
+    address: existing?.address || example?.address || "",
+    city: existing?.city || example?.city || "",
+    pincode: existing?.pincode || example?.pincode || "",
+    state: existing?.state || profile.state || "Gujarat",
     gstin: existing?.gstin || "",
   });
   const [error, setError] = useState("");

@@ -40,6 +40,7 @@ export interface InvoiceLineItem {
   lineTotal: number;
 }
 
+/** Stored statuses are PENDING and PAID. OVERDUE is derived for display (pending and past due). */
 export type InvoicePaymentStatus = 'PAID' | 'PENDING' | 'OVERDUE';
 
 export interface InvoiceTimelineEvent {
@@ -74,6 +75,7 @@ export interface InvoiceRecord {
   status: InvoicePaymentStatus;
   paymentMode?: string;
   paidAt?: string;
+  viewedAt?: string;
   timeline: InvoiceTimelineEvent[];
   notes?: string;
 }

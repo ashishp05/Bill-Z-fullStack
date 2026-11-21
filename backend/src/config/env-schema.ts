@@ -23,6 +23,11 @@ export const envSchema = z.object({
     .optional()
     .transform(val => val === 'true')
     .default(false),
+  // Fixed OTP for demo accounts in development. Ignored when NODE_ENV is production.
+  DEMO_OTP_CODE: z
+    .string()
+    .regex(/^\d{6}$/, 'DEMO_OTP_CODE must be 6 digits')
+    .optional(),
   USE_S3: z
     .string()
     .optional()

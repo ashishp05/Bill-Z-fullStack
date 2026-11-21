@@ -3,12 +3,14 @@ import { z } from 'zod';
 import {
   vendorLoginSchema,
   vendorRegisterSchema,
+  vendorSettingsSchema,
   vendorUpdateProfileSchema,
 } from '../schemas/vendor.schema';
 
 export type VendorRegisterInput = z.infer<typeof vendorRegisterSchema>;
 export type VendorLoginInput = z.infer<typeof vendorLoginSchema>;
 export type VendorUpdateProfileInput = z.infer<typeof vendorUpdateProfileSchema>;
+export type VendorSettingsInput = z.infer<typeof vendorSettingsSchema>;
 
 export interface VendorQueryFilterInput {
   limit?: number;

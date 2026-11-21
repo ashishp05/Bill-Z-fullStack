@@ -16,23 +16,23 @@ Source-of-truth docs (read the relevant one before any non-trivial change):
 | `website/` | Vendor and Customer PWA, one codebase with role-based views | Vite, React, TS, Tailwind, Vite PWA | `website/DESIGN_HANDOFF.md`, `website/README.md` |
 
 ### Commands
-- backend: `npm run dev` · `npm run build` · `npm run lint` · `npm run typecheck` · `npx prisma migrate dev --name <name>`
+- backend: `npm run dev` · `npm run build` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run db:seed` · `npx prisma migrate dev --name <name>`
 - admin: `npm run dev` · `npm run build` · `npm run lint`
-- website: `npm run dev` · `npm run build` · `npm run lint` (oxlint) · `npm test` (node test runner, `tests/*.test.ts`)
+- website: `npm run dev` · `npm run build` · `npm run lint` (oxlint) · `npm test` (node test runner, `tests/*.test.ts`). API mode: `VITE_DATA_SOURCE=api npm run dev`
 
 Always run the affected app's build, lint or typecheck after changes, and fix errors before reporting done.
 
-## Current state (as of 2026-11-18)
+## Current state (as of 2026-11-21)
 
 **Backend**
-- Feature modules in `src/features/{admin,vendor,product}/`. Each one uses **folder-per-layer**: `controllers/ repositories/ routes/ schemas/ services/ types/`. Follow that pattern for new features (customer, invoice, auth/otp), not the flat-file layout that plan.md describes.
-- Prisma models: `Admin`, `User`, `Roles`, `Vendor`, `Product`. Missing: `Customer`, `Invoice`, `InvoiceItem`, `OtpVerification`, Category/Brand.
-- Done: admin password auth + JWT (`SUPER_ADMIN`/`ADMIN`), admin vendor listing and status toggle, basic vendor auth (email/password), product CRUD with images.
-- Not done: email OTP auth, customers, invoices, PDF, the extended vendor business profile, admin platform stats.
+- Feature modules in `src/features/{admin,auth,catalog,customer,invoice,product,vendor}/`. Each one uses **folder-per-layer**: `controllers/ repositories/ routes/ schemas/ services/ types/`. Follow that pattern for new features (customer, invoice, auth/otp), not the flat-file layout that plan.md describes.
+- Prisma models: `Admin`, `User`, `Roles` (unused), `Vendor`, `VendorSettings`, `Category`, `Brand`, `Product`, `Customer`, `VendorCustomer`, `Invoice`, `InvoiceItem`, `OtpVerification`.
+- Done: admin password auth + JWT, admin vendor listing/status, email OTP for vendors and customers (`/auth/*`), vendor business profile + settings, product CRUD with SKU/HSN/GST/category/brand, vendor customers, transactional invoices with snapshots and concurrency-safe numbering, payment status, customer invoice access, vendor summary, global categories/brands API. `npm test` covers the invoice calculator.
+- Not done: invoice PDF, admin stats/customers/invoices APIs and screens, financial-year invoice numbering, product pagination/soft delete, per-request deactivated-account check. See plan.md "Progress — 21 November 2026".
 
 **Admin**: real login, profile, change-password and add-admin are wired. The vendor list exists. The dashboard metrics, customers and invoices screens are not built.
 
-**Website (PWA)**: the full Figma-based UI is built (Phases 7.1–7.9). **It runs on mock data**: `src/data/demo.json` plus typed async mocks in `src/services/auth.service.ts` and `billing.service.ts`. Those service files are the seams where real API adapters will go. Manifest, service worker, offline banner and install prompt are done.
+**Website (PWA)**: the full Figma-based UI is built (Phases 7.1–7.9). `VITE_DATA_SOURCE` picks the data layer: `mock` (default; `src/data/demo.json` + mocks in `src/services/*.service.ts`) or `api` (adapters in `src/api/*.adapter.ts`, Vite proxies `/api` to `VITE_API_PROXY_TARGET`). Both implement the same `AuthService`/`BillingService` contracts; UI components never call the API directly. Manifest, service worker, offline banner and install prompt are done.
 
 ## Non-negotiable rules
 
@@ -57,13 +57,19 @@ Always run the affected app's build, lint or typecheck after changes, and fix er
 
 ## Open decisions — ask before making irreversible schema choices
 
-- **Customer ownership:** can one customer buy from several vendors? If so, use a global customer identity plus a `VendorCustomer` link table, not a single `vendorId` on Customer. This is still unresolved.
+- ~~Customer ownership~~ **Decided:** global `Customer` identity + `VendorCustomer` link (one customer can buy from many vendors).
 - **Inventory:** assume billing only, with no stock logic. The existing `Product.quantity` and `unlimitedStock` fields predate this assumption; leave them as they are.
-- **GST:** the PWA UI already shows CGST/SGST/IGST and GSTIN. Confirm the backend tax model (per-product rate? HSN/SAC?) before hard-coding it.
+- ~~GST~~ **Decided:** per-product `gstRate` (0/5/12/18/28) + optional HSN; CGST+SGST when vendor state = customer state, else IGST.
 - **Invoice editing / void:** assume generated invoices are immutable unless the user decides otherwise.
-- **Categories/Brands:** are they global or per vendor? Global is preferred but not confirmed.
-- **Money representation:** integer paise or Prisma Decimal?
-- **User vs Admin/Vendor models:** the schema has both a `User` and role-specific tables. Check how they relate before adding Customer/OTP identity.
+- ~~Categories/Brands~~ **Decided:** global `Category` and `Brand` tables managed by admins.
+- ~~Money representation~~ **Decided:** whole Indian rupees as `Int` everywhere (no paise). Invoice math rounds GST per line to the rupee; keep `backend/src/utils/invoice-calculator.util.ts` and `website/src/utils/invoiceMath.ts` identical.
+- **Invoice numbering per financial year:** not decided; today the sequence is continuous per vendor with a vendor-set prefix.
+- **User vs Admin/Vendor models:** `User`/`Roles` are unused; Customer and OTP were built as separate tables. Don't build on `User`.
+
+## Demo data & credentials (dev only)
+
+- Backend: `npm run db:seed` (refuses to run in production). Super Admin `admin@billz.dev` / `Admin@12345`. Vendors `rohan@mehtatraders.in` (or 98250 12345) and `priya@nairhomestore.in`. Customer `aarav.mehta@gmail.com` (or 98765 43210), who has bills from both vendors. OTP = `DEMO_OTP_CODE` (482916 in `.env.example`).
+- PWA: the same accounts appear as shortcuts on the sign-in screen (mock mode always; API mode with `VITE_SHOW_DEMO_LOGINS=true`).
 
 ## Design tokens (PWA)
 

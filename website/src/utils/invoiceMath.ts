@@ -1,41 +1,46 @@
 import type { InvoiceLineItem } from "../types/billing.types";
 
-/** Work in paise and round each tax line, so mixed rates and split GST stay consistent. */
+/**
+ * Preview of the server's invoice math (backend/src/utils/invoice-calculator.util.ts).
+ * Amounts are whole rupees. The discount is spread across lines by value, then GST is
+ * rounded per line. The server result is authoritative; this only previews it.
+ */
 export function invoiceTotals(
   items: InvoiceLineItem[],
   requestedDiscount = 0,
   interState = false,
 ) {
-  const paise = (value: number) => Math.round(value * 100);
-  const linePaise = items.map((item) => paise(item.unitPrice * item.quantity));
-  const subtotalPaise = linePaise.reduce((sum, value) => sum + value, 0);
-  const discountPaise = Math.max(
+  const lineTotals = items.map((item) =>
+    Math.round(item.unitPrice * item.quantity),
+  );
+  const subtotal = lineTotals.reduce((sum, value) => sum + value, 0);
+  const discount = Math.max(
     0,
-    Math.min(subtotalPaise, paise(requestedDiscount)),
+    Math.min(subtotal, Math.round(requestedDiscount)),
   );
   let allocated = 0;
-  const taxPaise = items.reduce((sum, item, index) => {
+  const totalTax = items.reduce((sum, item, index) => {
     const discountShare =
       index === items.length - 1
-        ? discountPaise - allocated
-        : subtotalPaise
-          ? Math.round((discountPaise * linePaise[index]) / subtotalPaise)
+        ? discount - allocated
+        : subtotal
+          ? Math.round((discount * lineTotals[index]) / subtotal)
           : 0;
     allocated += discountShare;
     return (
       sum +
-      Math.round(((linePaise[index] - discountShare) * item.gstRate) / 100)
+      Math.round(((lineTotals[index] - discountShare) * item.gstRate) / 100)
     );
   }, 0);
-  const cgstPaise = interState ? 0 : Math.round(taxPaise / 2);
-  const sgstPaise = interState ? 0 : taxPaise - cgstPaise;
+  const cgst = interState ? 0 : Math.round(totalTax / 2);
+  const sgst = interState ? 0 : totalTax - cgst;
   return {
-    subtotal: subtotalPaise / 100,
-    discount: discountPaise / 100,
-    totalTax: taxPaise / 100,
-    cgst: cgstPaise / 100,
-    sgst: sgstPaise / 100,
-    igst: interState ? taxPaise / 100 : 0,
-    totalAmount: (subtotalPaise - discountPaise + taxPaise) / 100,
+    subtotal,
+    discount,
+    totalTax,
+    cgst,
+    sgst,
+    igst: interState ? totalTax : 0,
+    totalAmount: subtotal - discount + totalTax,
   };
 }

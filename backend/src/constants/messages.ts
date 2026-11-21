@@ -17,6 +17,13 @@ export const ResponseMessages = Object.freeze({
   STATUS_UPDATED_SUCCESS: 'Status updated successfully',
   PASSWORD_CHANGED_SUCCESS: 'Password changed successfully',
   PASSWORD_RESET_EMAIL_SENT: 'If an account exists, password reset instructions have been sent.',
+  ACCOUNT_FOUND: 'Account found',
+  OTP_SENT: 'Verification code sent',
+  OTP_VERIFIED: 'Verification successful',
+  SETTINGS_FETCHED: 'Settings fetched successfully',
+  SETTINGS_UPDATED: 'Settings updated successfully',
+  INVOICE_CREATED: 'Invoice created successfully',
+  PAYMENT_STATUS_UPDATED: 'Payment status updated successfully',
 });
 
 export const ValidationMessages = Object.freeze({
@@ -61,6 +68,44 @@ export const ValidationMessages = Object.freeze({
 
   // Product Errors
   PRODUCT_NOT_FOUND: 'Product not found',
+  PRODUCT_INACTIVE: 'One or more products are inactive or do not belong to you',
+  INVALID_GST_RATE: 'GST rate must be one of 0, 5, 12, 18 or 28',
+  INVALID_HSN: 'HSN/SAC code must be 4 to 8 digits',
+  WHOLE_RUPEES: 'Amount must be a whole number of rupees',
+
+  // Catalog Errors
+  CATEGORY_NOT_FOUND: 'Category not found',
+  BRAND_NOT_FOUND: 'Brand not found',
+
+  // OTP & Account Errors
+  ACCOUNT_NOT_FOUND:
+    'We couldn’t find an account with these details. Business owners can register below.',
+  ACCOUNT_AMBIGUOUS: 'This mobile number is linked to more than one account. Use your email.',
+  REGISTER_WITH_EMAIL: 'Enter your email address to register your business.',
+  ONLY_VENDORS_REGISTER: 'Only business owners can register. Customers are added by their vendor.',
+  OTP_COOLDOWN: 'Please wait before requesting another code.',
+  OTP_HOURLY_LIMIT: 'Too many codes requested. Please try again later.',
+  OTP_REQUEST_NEW: 'Request a new verification code.',
+  OTP_EXPIRED: 'This code has expired. Request a new code.',
+  OTP_INVALID: 'That code is incorrect. Please try again.',
+  OTP_ATTEMPTS_EXCEEDED: 'Attempt limit reached. Please request a new code.',
+  OTP_SEND_FAILED: 'We could not send the verification code. Please try again.',
+  ENTER_VALID_IDENTIFIER: 'Enter a valid email address or 10-digit mobile number.',
+  ENTER_VALID_GSTIN: 'Enter a valid 15-character GSTIN',
+  ENTER_VALID_PINCODE: 'Enter a valid 6-digit PIN code',
+
+  // Customer Errors
+  CUSTOMER_NOT_FOUND: 'Customer not found',
+  CUSTOMER_ALREADY_ADDED: 'This customer is already in your customer list',
+
+  // Invoice Errors
+  INVOICE_NOT_FOUND: 'Invoice not found',
+  INVOICE_ITEMS_REQUIRED: 'Add at least one product to the invoice',
+  INVOICE_DUE_BEFORE_DATE: 'Due date cannot be before the invoice date',
+  INVOICE_NUMBER_TOO_LOW: 'Next invoice number cannot be lower than the current sequence',
+  PAYMENT_MODE_REQUIRED: 'Payment mode is required when marking an invoice as paid',
+  INVALID_DATE: 'Date must be in YYYY-MM-DD format',
+  DUPLICATE_RECORD: 'A record with these details already exists',
 
   // Dynamic field helper functions
   required: (field: string) => `${field} is required`,

@@ -10,10 +10,13 @@ import { VendorRepository } from '../repositories/vendor.repository';
 import {
   VendorLoginInput,
   VendorRegisterInput,
+  VendorSettingsInput,
   VendorUpdateProfileInput,
 } from '../types/vendor.types';
 
-const formatVendorProfile = <T extends { profilePicture?: string | null }>(vendor: T | null) => {
+export const formatVendorProfile = <T extends { profilePicture?: string | null }>(
+  vendor: T | null,
+) => {
   if (!vendor) return null;
   return {
     ...vendor,
@@ -35,6 +38,7 @@ export class VendorService {
       ...data,
       password: hashedPassword,
     });
+    await this.vendorRepository.getOrCreateSettings(newVendor.id);
 
     const token = generateToken(newVendor.id, 'vendor');
     return {
@@ -44,19 +48,18 @@ export class VendorService {
   }
 
   async login(data: VendorLoginInput) {
-    console.log('Data-----', data);
     const vendor = await this.vendorRepository.findByEmail(data.email);
     if (!vendor) {
       throw new ApiError(StatusCodes.NOT_FOUND, ValidationMessages.VENDOR_NOT_FOUND);
     }
 
-    console.log('vendor--------', vendor);
-
     if (!vendor.active) {
       throw new ApiError(StatusCodes.FORBIDDEN, ValidationMessages.ACCOUNT_INACTIVE);
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, vendor.password);
+    // Vendors created through email OTP have no password.
+    const isPasswordValid =
+      !!vendor.password && (await bcrypt.compare(data.password, vendor.password));
     if (!isPasswordValid) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, ValidationMessages.INVALID_CREDENTIALS);
     }
@@ -109,5 +112,24 @@ export class VendorService {
 
     const updated = await this.vendorRepository.updateProfilePicture(vendorId, imagePath);
     return formatVendorProfile(updated);
+  }
+
+  async getSettings(vendorId: string) {
+    return this.vendorRepository.getOrCreateSettings(vendorId);
+  }
+
+  async updateSettings(vendorId: string, data: VendorSettingsInput) {
+    const current = await this.vendorRepository.getOrCreateSettings(vendorId);
+    const prefix = data.invoicePrefix ?? current.invoicePrefix;
+
+    // Never allow a sequence that would reuse an existing invoice number under the same prefix.
+    if (data.nextInvoiceNumber !== undefined) {
+      const highest = await this.vendorRepository.findHighestInvoiceSequence(vendorId, prefix);
+      if (data.nextInvoiceNumber <= highest) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, ValidationMessages.INVOICE_NUMBER_TOO_LOW);
+      }
+    }
+
+    return this.vendorRepository.updateSettings(vendorId, data);
   }
 }

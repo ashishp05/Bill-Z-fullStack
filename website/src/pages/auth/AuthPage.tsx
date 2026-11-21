@@ -16,6 +16,43 @@ import {
 import type { DesignScreen } from "../../components/common/Design";
 import type { UserRole } from "../../types/auth.types";
 import seed from "../../data/demo.json";
+import { SHOW_DEMO_LOGINS } from "../../config/dataSource";
+
+/** Demo code: the mock always accepts it; the API accepts it when DEMO_OTP_CODE is set (non-production). */
+const DEMO_CODE = import.meta.env.VITE_DEMO_OTP_CODE || seed.demoAuth.code;
+const demoDigits = () =>
+  SHOW_DEMO_LOGINS ? DEMO_CODE.split("") : Array.from({ length: 6 }, () => "");
+
+/** Sign-in shortcuts for design review and QA. Hidden in API mode unless VITE_SHOW_DEMO_LOGINS=true. */
+function DemoAccounts({ onPick }: { onPick: (identifier: string) => void }) {
+  return (
+    <section
+      aria-label="Demo accounts"
+      className="rounded-2xl border border-dashed border-[#E4E7EC] bg-[#F6F8FB] p-3 text-left"
+    >
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#667085]">
+        Demo accounts · code <span className="font-mono text-[#172033]">{DEMO_CODE}</span>
+      </p>
+      <div className="flex flex-col gap-2">
+        {seed.demoAccounts.map((account) => (
+          <button
+            key={account.email}
+            type="button"
+            onClick={() => onPick(account.email)}
+            className="rounded-xl border border-[#E4E7EC] bg-white px-3 py-2 text-left hover:border-[#2563EB]"
+          >
+            <span className="block text-sm font-semibold text-[#172033]">
+              {account.label} · {account.name}
+            </span>
+            <span className="block text-xs text-[#667085]">
+              {account.email} or {account.mobile}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function AuthPage() {
   const auth = useAuth();
@@ -34,16 +71,17 @@ export function AuthPage() {
   const [email, setEmail] = useState("");
   const [destination, setDestination] = useState("");
   const [channel, setChannel] = useState<"email" | "sms">("email");
-  const [digits, setDigits] = useState(seed.demoAuth.code.split(""));
+  const [digits, setDigits] = useState(demoDigits);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const [resendAt, setResendAt] = useState(0);
   const [clock, setClock] = useState(() => Date.now());
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [account, setAccount] = useState({
-    name: "Rohan Mehta",
-    phone: seed.profile.phoneNumber,
-  });
+  const [account, setAccount] = useState(
+    SHOW_DEMO_LOGINS
+      ? { name: "Rohan Mehta", phone: seed.profile.phoneNumber }
+      : { name: "", phone: "" },
+  );
   const [business, setBusiness] = useState({
     ...profile,
     businessType: "Retail & trading",
@@ -87,7 +125,12 @@ export function AuthPage() {
           target = await auth.findAccount(value);
         }
       }
-      const result = await auth.requestOtp(target.email, target.role);
+      const result = await auth.requestOtp(
+        target.email,
+        target.role,
+        register ? "register" : "login",
+      );
+      if (result.destination) target.destination = result.destination;
       setRole(target.role);
       auth.setRole(target.role);
       setEmail(target.email);
@@ -95,7 +138,7 @@ export function AuthPage() {
       setDestination(target.destination);
       setResendAt(result.resendAt);
       setClock(Date.now());
-      setDigits(seed.demoAuth.code.split(""));
+      setDigits(demoDigits());
       setNew(register);
       setStep("otp");
     } catch (e) {
@@ -114,7 +157,12 @@ export function AuthPage() {
     setError("");
     try {
       if (step === "otp") {
-        await auth.verifyOtp(email.trim().toLowerCase(), digits.join(""), role);
+        await auth.verifyOtp(
+          email.trim().toLowerCase(),
+          digits.join(""),
+          role,
+          isNew ? "register" : "login",
+        );
         if (isNew && role === "vendor") setStep("register");
         else
           navigate(role === "vendor" ? "/vendor" : "/customer", {
@@ -131,8 +179,15 @@ export function AuthPage() {
         setStep("business");
       }
       if (step === "business") {
-        const { businessType: _businessType, ...patch } = business;
-        await updateProfile(patch);
+        const { businessType, ...patch } = business;
+        const [firstName, ...last] = account.name.trim().split(/\s+/);
+        await updateProfile({
+          ...patch,
+          businessType,
+          firstName,
+          lastName: last.join(" "),
+          phoneNumber: account.phone,
+        });
         auth.updateUser({ businessName: business.businessName });
         navigate("/vendor", { replace: true });
       }
@@ -265,6 +320,14 @@ export function AuthPage() {
               <p className="auth-helper">
                 We’ll send a one-time code by email or SMS.
               </p>
+              {SHOW_DEMO_LOGINS && (
+                <DemoAccounts
+                  onPick={(value) => {
+                    setIdentifier(value);
+                    setError("");
+                  }}
+                />
+              )}
               <div className="auth-options">
                 <hr />
                 <p>Own a business? Get started here.</p>

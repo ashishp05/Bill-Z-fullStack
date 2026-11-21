@@ -81,6 +81,13 @@ const apiErrorHandler = (
       });
       return;
     }
+    // Unique constraint (duplicate SKU, invoice number, email, ...)
+    if (err.code === 'P2002') {
+      res
+        .status(StatusCodes.CONFLICT)
+        .json({ success: false, message: ValidationMessages.DUPLICATE_RECORD });
+      return;
+    }
     // Handle Prisma validation errors
     if (err.meta) {
       const firstKey = Object.keys(err?.meta)[0];

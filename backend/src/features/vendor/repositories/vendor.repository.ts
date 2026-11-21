@@ -3,11 +3,82 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import {
   VendorQueryFilterInput,
   VendorRegisterInput,
+  VendorSettingsInput,
   VendorUpdateProfileInput,
 } from '../types/vendor.types';
 
+// Profile fields returned to clients. Never includes the password hash.
+export const vendorProfileSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  businessName: true,
+  businessType: true,
+  gstin: true,
+  isRegisteredGST: true,
+  phoneCountry: true,
+  phoneNumber: true,
+  address: true,
+  city: true,
+  state: true,
+  pincode: true,
+  upiId: true,
+  profilePicture: true,
+  active: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.VendorSelect;
+
+const defaultInvoicePrefix = () => `INV-${new Date().getFullYear()}-`;
+
 export class VendorRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async findByPhone(phoneNumber: string) {
+    return this.prisma.vendor.findMany({
+      where: { phoneNumber },
+      select: vendorProfileSelect,
+      take: 2,
+    });
+  }
+
+  // Creates a vendor from a verified email (OTP registration) together with default settings.
+  async createFromVerifiedEmail(email: string) {
+    return this.prisma.vendor.create({
+      data: {
+        email,
+        settings: { create: { invoicePrefix: defaultInvoicePrefix() } },
+      },
+      select: vendorProfileSelect,
+    });
+  }
+
+  // Settings rows are created lazily for vendors that predate them.
+  async getOrCreateSettings(vendorId: string) {
+    return this.prisma.vendorSettings.upsert({
+      where: { vendorId },
+      create: { vendorId, invoicePrefix: defaultInvoicePrefix() },
+      update: {},
+    });
+  }
+
+  async updateSettings(vendorId: string, data: VendorSettingsInput) {
+    return this.prisma.vendorSettings.update({
+      where: { vendorId },
+      data,
+    });
+  }
+
+  async findHighestInvoiceSequence(vendorId: string, prefix: string) {
+    const latest = await this.prisma.invoice.findFirst({
+      where: { vendorId, invoiceNumber: { startsWith: prefix } },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
+    });
+    const sequence = latest ? Number(latest.invoiceNumber.slice(prefix.length)) : 0;
+    return Number.isFinite(sequence) ? sequence : 0;
+  }
 
   async findByEmail(email: string) {
     return this.prisma.vendor.findUnique({
@@ -18,36 +89,14 @@ export class VendorRepository {
   async findById(id: string) {
     return this.prisma.vendor.findUnique({
       where: { id },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        businessName: true,
-        phoneCountry: true,
-        phoneNumber: true,
-        profilePicture: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: vendorProfileSelect,
     });
   }
 
   async create(data: VendorRegisterInput & { password: string }) {
     return this.prisma.vendor.create({
       data,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        businessName: true,
-        phoneCountry: true,
-        phoneNumber: true,
-        profilePicture: true,
-        createdAt: true,
-      },
+      select: vendorProfileSelect,
     });
   }
 
@@ -55,17 +104,7 @@ export class VendorRepository {
     return this.prisma.vendor.update({
       where: { id },
       data,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        businessName: true,
-        phoneCountry: true,
-        phoneNumber: true,
-        profilePicture: true,
-        updatedAt: true,
-      },
+      select: vendorProfileSelect,
     });
   }
 
@@ -73,17 +112,7 @@ export class VendorRepository {
     return this.prisma.vendor.update({
       where: { id },
       data: { profilePicture },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        businessName: true,
-        phoneCountry: true,
-        phoneNumber: true,
-        profilePicture: true,
-        updatedAt: true,
-      },
+      select: vendorProfileSelect,
     });
   }
 
@@ -144,19 +173,7 @@ export class VendorRepository {
         orderBy: {
           [sortKey]: sortOrder,
         },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          businessName: true,
-          phoneCountry: true,
-          phoneNumber: true,
-          profilePicture: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: vendorProfileSelect,
       }),
     ]);
 
@@ -167,19 +184,7 @@ export class VendorRepository {
     return this.prisma.vendor.update({
       where: { id },
       data: { active },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        businessName: true,
-        phoneCountry: true,
-        phoneNumber: true,
-        profilePicture: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: vendorProfileSelect,
     });
   }
 }
